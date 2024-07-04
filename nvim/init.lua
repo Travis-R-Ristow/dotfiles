@@ -21,15 +21,15 @@ vim.opt.rtp:prepend(lazypath)
 require('lazy').setup({
   'neovim/nvim-lspconfig',
 
-  'hrsh7th/cmp-nvim-lsp',
   'hrsh7th/nvim-cmp',
+  'hrsh7th/cmp-nvim-lsp',
   'hrsh7th/cmp-buffer',
   'hrsh7th/cmp-cmdline',
   'hrsh7th/cmp-path',
 
   'L3MON4D3/LuaSnip',
 
-  'xiyaowong/transparent.nvim',
+  -- 'nvim-treesitter/nvim-treesitter',
 
   {
     'nvim-telescope/telescope.nvim',
@@ -39,6 +39,8 @@ require('lazy').setup({
   },
 
   'rebelot/kanagawa.nvim',
+
+  'xiyaowong/transparent.nvim',
 
   'prettier/vim-prettier',
 })
@@ -69,6 +71,23 @@ lsp.lua_ls.setup {
 lsp.bashls.setup {
   capabilities = defaultCapabilities
 }
+
+local htmlCapas = defaultCapabilities
+htmlCapas.textDocument.completion.completionItem.snippetSupport = true
+
+lsp.html.setup {
+  capabilities = defaultCapabilities,
+  init_options = {
+    provideFormatter = false,
+    configurationSection = { "html", "css", "javascript" },
+    embeddedLanguages = {
+      css = true,
+      javascript = true
+    }
+  }
+}
+
+
 
 -- lsp.ltex.setup {
 --   capabilities = defaultCapabilities
