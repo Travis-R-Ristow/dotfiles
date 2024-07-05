@@ -34,7 +34,9 @@ require('lazy').setup({
   {
     'nvim-telescope/telescope.nvim',
     dependencies = {
-      'nvim-lua/plenary.nvim'
+      'BurntSushi/ripgrep',
+      'nvim-lua/plenary.nvim',
+      'sharkdp/fd',
     }
   },
 
@@ -151,6 +153,17 @@ require 'nvim-treesitter'.setup {
 }
 
 
+
+-- TELESCOPE
+
+require 'telescope'.setup({
+  defaults = {
+    file_ignore_patterns = { "node_modules" }
+  }
+})
+
+
+
 -- FORMATTERS
 
 vim.api.nvim_create_autocmd('BufWritePre', {
@@ -198,8 +211,9 @@ vim.keymap.set('n', ']g', vim.diagnostic.goto_next)
 
 vim.keymap.set('n', 'grn', vim.lsp.buf.rename) -- this should already be the default, but wasn't working ???
 vim.keymap.set('n', 'gtd', vim.lsp.buf.type_definition)
-vim.keymap.set('n', 'gtl', ':copen<CR>')
 vim.keymap.set('n', 'gtr', vim.lsp.buf.references)
-
+vim.keymap.set('n', '<leader>ls', ':!ls %:p:h<CR>')
+vim.keymap.set('n', 'gtl', ':copen<CR>')
+vim.keymap.set('n', 'qlc', ':cclose<CR>')
 
 vim.cmd('colorscheme kanagawa')
