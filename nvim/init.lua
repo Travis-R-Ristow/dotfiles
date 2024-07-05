@@ -29,7 +29,7 @@ require('lazy').setup({
 
   'L3MON4D3/LuaSnip',
 
-  -- 'nvim-treesitter/nvim-treesitter',
+  'nvim-treesitter/nvim-treesitter',
 
   {
     'nvim-telescope/telescope.nvim',
@@ -139,6 +139,16 @@ cmp.setup({
 
 })
 
+
+
+-- TREESITTER
+
+require 'nvim-treesitter'.setup {
+  ensure_installed = { 'html', 'lua' },
+  -- highlight = {
+  --   enable = true
+  -- }
+}
 
 
 -- FORMATTERS
