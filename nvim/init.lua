@@ -30,14 +30,21 @@ require('lazy').setup({
   'L3MON4D3/LuaSnip',
 
   'nvim-treesitter/nvim-treesitter',
+  'windwp/nvim-ts-autotag',
+  'windwp/nvim-autopairs',
+
+  'nvim-lua/plenary.nvim',
+  'sharkdp/fd',
 
   {
     'nvim-telescope/telescope.nvim',
     dependencies = {
       'BurntSushi/ripgrep',
-      'nvim-lua/plenary.nvim',
-      'sharkdp/fd',
     }
+  },
+  {
+    "nvim-telescope/telescope-file-browser.nvim",
+    dependencies = { "nvim-telescope/telescope.nvim", "nvim-lua/plenary.nvim" }
   },
 
   'rebelot/kanagawa.nvim',
@@ -145,22 +152,77 @@ cmp.setup({
 
 -- TREESITTER
 
+local parser_config = require "nvim-treesitter.parsers".get_parser_configs()
+parser_config.tsx.filetype_to_parsername = { "javascript", "typescript.tsx" }
+
 require 'nvim-treesitter'.setup {
-  ensure_installed = { 'html', 'lua' },
+  ensure_installed = { 'html', 'css', 'markdown', 'lua' },
+  autotag = {
+    enable = true
+  }
   -- highlight = {
   --   enable = true
   -- }
 }
 
+require 'nvim-ts-autotag'.setup {}
+
+require 'nvim-autopairs'.setup({
+  disable_filetype = { "TelescopePrompt" },
+})
+
 
 
 -- TELESCOPE
 
-require 'telescope'.setup({
+-- local fb_actions = require "telescope._extensions.file_browser.actions"
+local telescope = require 'telescope'
+
+telescope.setup({
   defaults = {
     file_ignore_patterns = { "node_modules" }
+  },
+  extensions = {
+    file_browser = {
+      -- hijack_netrw = true,
+      -- mappings = {   -- DEFAULTS
+      --   ["i"] = {
+      --     ["<A-c>"] = fb_actions.create,
+      --     ["<S-CR>"] = fb_actions.create_from_prompt,
+      --     ["<A-r>"] = fb_actions.rename,
+      --     ["<A-m>"] = fb_actions.move,
+      --     ["<A-y>"] = fb_actions.copy,
+      --     ["<A-d>"] = fb_actions.remove,
+      --     ["<C-o>"] = fb_actions.open,
+      --     ["<C-g>"] = fb_actions.goto_parent_dir,
+      --     ["<C-e>"] = fb_actions.goto_home_dir,
+      --     ["<C-w>"] = fb_actions.goto_cwd,
+      --     ["<C-t>"] = fb_actions.change_cwd,
+      --     ["<C-f>"] = fb_actions.toggle_browser,
+      --     ["<C-h>"] = fb_actions.toggle_hidden,
+      --     ["<C-s>"] = fb_actions.toggle_all,
+      --     ["<bs>"] = fb_actions.backspace,
+      --   },
+      --   ["n"] = {
+      --     ["c"] = fb_actions.create,
+      --     ["r"] = fb_actions.rename,
+      --     ["m"] = fb_actions.move,
+      --     ["y"] = fb_actions.copy,
+      --     ["d"] = fb_actions.remove,
+      --     ["o"] = fb_actions.open,
+      --     ["g"] = fb_actions.goto_parent_dir,
+      --     ["e"] = fb_actions.goto_home_dir,
+      --     ["w"] = fb_actions.goto_cwd,
+      --     ["t"] = fb_actions.change_cwd,
+      --     ["f"] = fb_actions.toggle_browser,
+      --     ["h"] = fb_actions.toggle_hidden,
+      --     ["s"] = fb_actions.toggle_all,
+      --   },
+      -- }
+    }
   }
 })
+telescope.load_extension 'file_browser'
 
 
 
@@ -195,24 +257,29 @@ vim.keymap.set('n', 'nh', '<cmd>noh<CR>')
 
 vim.keymap.set('n', '<C-u>', '<C-u>zz')
 vim.keymap.set('n', '<C-d>', '<C-d>zz')
+vim.keymap.set('n', '<C-o>', '<C-o>zz')
 vim.keymap.set('n', 'n', 'nzz')
 vim.keymap.set('n', 'N', 'Nzz')
 
 
-local telescope = require 'telescope.builtin'
-vim.keymap.set('n', '<leader>ff', telescope.find_files)
-vim.keymap.set('n', '<leader>lg', telescope.live_grep)
-vim.keymap.set('n', '<leader>tb', telescope.buffers)
-vim.keymap.set('n', '<leader>fh', telescope.help_tags)
+local telescopeActions = require 'telescope.builtin'
+vim.keymap.set('n', '<leader>ff', telescopeActions.find_files)
+vim.keymap.set('n', '<leader>lg', telescopeActions.live_grep)
+vim.keymap.set('n', '<leader>tb', telescopeActions.buffers)
+vim.keymap.set('n', '<leader>fh', telescopeActions.help_tags)
 
 
 vim.keymap.set('n', '[g', vim.diagnostic.goto_prev)
 vim.keymap.set('n', ']g', vim.diagnostic.goto_next)
 
 vim.keymap.set('n', 'grn', vim.lsp.buf.rename) -- this should already be the default, but wasn't working ???
+vim.keymap.set('n', 'gd', telescopeActions.lsp_definitions)
 vim.keymap.set('n', 'gtd', vim.lsp.buf.type_definition)
 vim.keymap.set('n', 'gtr', vim.lsp.buf.references)
+
 vim.keymap.set('n', '<leader>ls', ':!ls %:p:h<CR>')
+vim.keymap.set("n", "<leader>fb", ':Telescope file_browser path=%:p:h<CR>')
+
 vim.keymap.set('n', 'gtl', ':copen<CR>')
 vim.keymap.set('n', 'qlc', ':cclose<CR>')
 
