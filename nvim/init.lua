@@ -30,16 +30,18 @@ require('lazy').setup({
   'L3MON4D3/LuaSnip',
 
   'nvim-treesitter/nvim-treesitter',
+
   'windwp/nvim-ts-autotag',
   'windwp/nvim-autopairs',
+  'pedro757/emmet',
 
-  'nvim-lua/plenary.nvim',
-  'sharkdp/fd',
 
   {
     'nvim-telescope/telescope.nvim',
     dependencies = {
       'BurntSushi/ripgrep',
+      'nvim-lua/plenary.nvim',
+      'sharkdp/fd',
     }
   },
   {
@@ -59,6 +61,7 @@ require('lazy').setup({
 -- LSP
 
 local lsp                 = require 'lspconfig'
+local lspconfigs          = require 'lspconfig.configs'
 local cmplsp              = require 'cmp_nvim_lsp'
 local defaultCapabilities = cmplsp.default_capabilities()
 
@@ -81,11 +84,11 @@ lsp.bashls.setup {
   capabilities = defaultCapabilities
 }
 
-local htmlCapas = defaultCapabilities
-htmlCapas.textDocument.completion.completionItem.snippetSupport = true
+local useSnippets = vim.lsp.protocol.make_client_capabilities()
+useSnippets.textDocument.completion.completionItem.snippetSupport = true
 
 lsp.html.setup {
-  capabilities = defaultCapabilities,
+  capabilities = useSnippets,
   init_options = {
     provideFormatter = false,
     configurationSection = { "html", "css", "javascript" },
@@ -96,7 +99,31 @@ lsp.html.setup {
   }
 }
 
+if not lspconfigs.ls_emmet then
+  lspconfigs.ls_emmet = {
+    default_config = {
+      cmd = { 'ls_emmet', '--stdio' },
+      filetypes = {
+        'html',
+        'css',
+        'typescriptreact',
+        'xml',
+        'xsl',
+      },
+      root_dir = function(fname)
+        return vim.loop.cwd()
+      end,
+      settings = {},
+    },
+  }
+end
+lsp.ls_emmet.setup {
+  capabilities = useSnippets,
+}
 
+lsp.cssls.setup {
+  capabilities = defaultCapabilities,
+}
 
 -- lsp.ltex.setup {
 --   capabilities = defaultCapabilities
