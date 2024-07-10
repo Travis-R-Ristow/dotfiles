@@ -35,7 +35,6 @@ require('lazy').setup({
   'windwp/nvim-autopairs',
   'pedro757/emmet',
 
-
   {
     'nvim-telescope/telescope.nvim',
     dependencies = {
@@ -66,7 +65,12 @@ local cmplsp              = require 'cmp_nvim_lsp'
 local defaultCapabilities = cmplsp.default_capabilities()
 
 lsp.tsserver.setup {
-  capabilities = defaultCapabilities
+  capabilities = defaultCapabilities,
+  init_options = {
+    preferences = {
+      importModuleSpecifierPreference = 'relative',
+    }
+  }
 }
 
 lsp.lua_ls.setup {
@@ -292,9 +296,7 @@ vim.keymap.set('n', 'N', 'Nzz')
 local telescopeActions = require 'telescope.builtin'
 vim.keymap.set('n', '<leader>ff', telescopeActions.find_files)
 vim.keymap.set('n', '<leader>lg', telescopeActions.live_grep)
-vim.keymap.set('n', '<leader>tb', telescopeActions.buffers)
-vim.keymap.set('n', '<leader>fh', telescopeActions.help_tags)
-
+vim.keymap.set('n', '<leader>lgs', telescopeActions.grep_string)
 
 vim.keymap.set('n', '[g', vim.diagnostic.goto_prev)
 vim.keymap.set('n', ']g', vim.diagnostic.goto_next)
