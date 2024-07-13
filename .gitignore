@@ -2,5 +2,5 @@
 !.gitignore
 !nvim/
 !nvim/*
-!imgs/
-!imgs/*
+# !imgs/
+# !imgs/*

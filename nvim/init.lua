@@ -292,11 +292,20 @@ vim.keymap.set('n', '<C-o>', '<C-o>zz')
 vim.keymap.set('n', 'n', 'nzz')
 vim.keymap.set('n', 'N', 'Nzz')
 
-
 local telescopeActions = require 'telescope.builtin'
 vim.keymap.set('n', '<leader>ff', telescopeActions.find_files)
 vim.keymap.set('n', '<leader>lg', telescopeActions.live_grep)
 vim.keymap.set('n', '<leader>lgs', telescopeActions.grep_string)
+local function grep_with_selection()
+  vim.cmd('noau normal! "vy"')
+  local search_text = vim.fn.getreg('v')
+  telescopeActions.live_grep({
+    default_text = search_text,
+  })
+end
+vim.keymap.set('v', '<leader>lg', grep_with_selection)
+vim.keymap.set('n', '<leader>jl', telescopeActions.jumplist)
+vim.keymap.set('n', '<leader>ml', telescopeActions.marks)
 
 vim.keymap.set('n', '[g', vim.diagnostic.goto_prev)
 vim.keymap.set('n', ']g', vim.diagnostic.goto_next)
