@@ -114,7 +114,7 @@ if not lspconfigs.ls_emmet then
         'xml',
         'xsl',
       },
-      root_dir = function(fname)
+      root_dir = function()
         return vim.loop.cwd()
       end,
       settings = {},
@@ -296,6 +296,7 @@ local telescopeActions = require 'telescope.builtin'
 vim.keymap.set('n', '<leader>ff', telescopeActions.find_files)
 vim.keymap.set('n', '<leader>lg', telescopeActions.live_grep)
 vim.keymap.set('n', '<leader>lgs', telescopeActions.grep_string)
+vim.keymap.set('n', '<leader>rf', telescopeActions.oldfiles)
 local function grep_with_selection()
   vim.cmd('noau normal! "vy"')
   local search_text = vim.fn.getreg('v')
