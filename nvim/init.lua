@@ -21,6 +21,8 @@ vim.opt.rtp:prepend(lazypath)
 require('lazy').setup({
   'neovim/nvim-lspconfig',
 
+  { 'fatih/vim-go', cmd = 'go install' },
+
   'hrsh7th/nvim-cmp',
   'hrsh7th/cmp-nvim-lsp',
   'hrsh7th/cmp-buffer',
@@ -85,6 +87,10 @@ lsp.lua_ls.setup {
 }
 
 lsp.bashls.setup {
+  capabilities = defaultCapabilities
+}
+
+lsp.gopls.setup {
   capabilities = defaultCapabilities
 }
 
