@@ -23,6 +23,8 @@ require('lazy').setup({
 
   { 'fatih/vim-go', cmd = 'GoInstallBinaries' },
 
+  'styled-components/vim-styled-components',
+
   'hrsh7th/nvim-cmp',
   'hrsh7th/cmp-nvim-lsp',
   'hrsh7th/cmp-buffer',
@@ -63,11 +65,13 @@ require('lazy').setup({
 
 local lsp                 = require 'lspconfig'
 local lspconfigs          = require 'lspconfig.configs'
+local lspUtil             = require 'lspconfig.util'
 local cmplsp              = require 'cmp_nvim_lsp'
 local defaultCapabilities = cmplsp.default_capabilities()
 
 lsp.tsserver.setup {
   capabilities = defaultCapabilities,
+  -- root_dir = lspUtil.root_pattern('package.json'),
   init_options = {
     preferences = {
       importModuleSpecifierPreference = 'relative',
@@ -92,6 +96,17 @@ lsp.bashls.setup {
 
 lsp.gopls.setup {
   capabilities = defaultCapabilities
+}
+
+lsp.eslint.setup {
+  capabilities = defaultCapabilities,
+  -- root_dir = lspUtil.root_pattern('package.json'),
+  on_attach = function(client, bufnr)
+    vim.api.nvim_create_autocmd("BufWritePre", {
+      buffer = bufnr,
+      command = "EslintFixAll",
+    })
+  end,
 }
 
 local useSnippets = vim.lsp.protocol.make_client_capabilities()
@@ -131,6 +146,10 @@ lsp.ls_emmet.setup {
   capabilities = useSnippets,
 }
 
+vim.cmd [[
+  autocmd BufEnter *.{js,jsx,ts,tsx} :syntax sync fromstart
+  autocmd BufLeave *.{js,jsx,ts,tsx} :syntax sync clear
+]]
 lsp.cssls.setup {
   capabilities = defaultCapabilities,
 }
