@@ -1,6 +1,5 @@
 require("lazyPlugins")
 
-
 -- Options
 local opt = vim.opt
 
@@ -14,6 +13,14 @@ opt.autoindent = true
 
 opt.clipboard:append("unnamedplus")
 
+opt.spell = true
+opt.spelllang = "en_us"
+opt.spelloptions = "camel"
 
+-- KeyBind / Remaps
+-- vim.keymap.set("n", "<Home>", "^", { silent = true })
+-- vim.keymap.set("n", "<End>", "$", { silent = true })
+
+vim.keymap.set("n", "grn", vim.lsp.buf.rename)
 
 vim.cmd("let g:netrw_liststyle = 3")
