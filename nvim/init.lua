@@ -20,7 +20,8 @@ opt.spelloptions = "camel"
 -- KeyBind / Remaps
 -- vim.keymap.set("n", "<Home>", "^", { silent = true })
 -- vim.keymap.set("n", "<End>", "$", { silent = true })
-
+vim.keymap.set("v", "Y", '"zy')
+vim.keymap.set("n", "P", '"zp')
 vim.keymap.set("n", "grn", vim.lsp.buf.rename)
 
 vim.cmd("let g:netrw_liststyle = 3")

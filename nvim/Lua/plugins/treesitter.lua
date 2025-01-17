@@ -29,7 +29,7 @@ return {
 
 		vim.opt.foldmethod = "expr"
 		vim.opt.foldexpr = "v:lua.vim.treesitter.foldexpr()"
-		vim.opt.foldminlines = 80
-		vim.opt.foldnestmax = 1
+		vim.opt.foldminlines = 100
+		vim.opt.foldnestmax = 0
 	end,
 }
