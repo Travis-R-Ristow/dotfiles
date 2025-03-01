@@ -24,4 +24,8 @@ vim.keymap.set("v", "Y", '"zy')
 vim.keymap.set("n", "P", '"zp')
 vim.keymap.set("n", "grn", vim.lsp.buf.rename)
 
+vim.api.nvim_create_user_command("W", function()
+	vim.cmd("w")
+end, {})
+
 vim.cmd("let g:netrw_liststyle = 3")
