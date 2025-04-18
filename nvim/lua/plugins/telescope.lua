@@ -45,7 +45,7 @@ return {
 		vim.keymap.set("v", "<leader>fg", grep_with_selection, { desc = "Telescope live grep" })
 		vim.keymap.set("n", "<leader>gr", builtin.lsp_references, { desc = "Telescope references" })
 		vim.keymap.set("n", "<leader>fr", function()
-			builtin.oldfiles({ cwd = vim.fn.expand("%:p:h") })
+			builtin.oldfiles({ cmd = vim.fn.expand("%") })
 		end, { desc = "Telescope recent files" })
 		vim.keymap.set("n", "<leader>fb", builtin.buffers, { desc = "Telescope buffers" })
 		vim.keymap.set("n", "<leader>fh", builtin.help_tags, { desc = "Telescope help tags" })

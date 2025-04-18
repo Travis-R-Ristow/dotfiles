@@ -17,7 +17,6 @@ return {
 		"williamboman/mason.nvim",
 		dependencies = {
 			"williamboman/mason-lspconfig.nvim",
-			"Hoffs/omnisharp-extended-lsp.nvim",
 		},
 		config = function()
 			local mason = require("mason")
@@ -108,18 +107,29 @@ return {
 						},
 					})
 				end,
-				["omnisharp"] = function()
-					lspconfig["omnisharp"].setup({
+				["omnisharp"] = function(server_name)
+					lspconfig[server_name].setup({
+						capabilities = capabilities,
+						root_dir = function(fname)
+							return vim.fs.dirname(vim.fs.find(".git", { path = fname, upward = true })[1])
+						end,
 						cmd = {
 							"/Users/TRistow/.local/share/nvim/mason/bin/omnisharp",
 							"--languageserver",
 							"--hostPID",
 							tostring(vim.fn.getpid()),
 						},
-						handlers = {
-							["textDocument/definition"] = require("omnisharp_extended").handler,
-						},
-						enable_editorconfig_support = true,
+						on_attach = function(client, buf)
+							client.server_capabilities.semanticTokensProvider = nil
+
+							vim.api.nvim_create_autocmd("BufWritePost", {
+								buffer = buf,
+								command = ":!dotnet csharpier %",
+							})
+						end,
+						-- handlers = {
+						-- 	["textDocument/definition"] = require("omnisharp_extended").handler,
+						-- },
 						settings = {
 							FormattingOptions = {
 								-- Enables support for reading code style, naming convention and analyzer
@@ -127,7 +137,7 @@ return {
 								EnableEditorConfigSupport = true,
 								-- Specifies whether 'using' directives should be grouped and sorted during
 								-- document formatting.
-								-- OrganizeImports = nil,
+								OrganizeImports = true,
 							},
 							MsBuild = {
 								-- If true, MSBuild project system will only load projects for files that
@@ -136,11 +146,11 @@ return {
 								-- for projects that are relevant to code that is being edited. With this
 								-- setting enabled OmniSharp may load fewer projects and may thus display
 								-- incomplete reference lists for symbols.
-								LoadProjectsOnDemand = true,
+								LoadProjectsOnDemand = false,
 							},
 							RoslynExtensionsOptions = {
 								-- Enables support for roslyn analyzers, code fixes and rulesets.
-								EnableAnalyzersSupport = true,
+								-- EnableAnalyzersSupport = true,
 								-- Enables support for showing unimported types and unimported extension
 								-- methods in completion lists. When committed, the appropriate using
 								-- directive will be added at the top of the current file. This option can
@@ -150,7 +160,8 @@ return {
 								EnableImportCompletion = true,
 								-- Only run analyzers against open files when 'enableRoslynAnalyzers' is
 								-- true
-								AnalyzeOpenDocumentsOnly = nil,
+								AnalyzeOpenDocumentsOnly = false,
+								EnableAnalyzersSupport = true,
 							},
 							Sdk = {
 								-- Specifies whether to include preview versions of the .NET SDK when

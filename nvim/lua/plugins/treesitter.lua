@@ -8,7 +8,7 @@ return {
 		treesitter.setup({
 			indent = { enable = true },
 			autotag = { enable = true },
-			sync_install = false,
+			sync_install = true,
 			ensure_installed = {
 				"javascript",
 				"typescript",
@@ -17,6 +17,7 @@ return {
 				"tsx",
 				"lua",
 				"graphql",
+				"c_sharp",
 				"markdown",
 			},
 			auto_install = true,
