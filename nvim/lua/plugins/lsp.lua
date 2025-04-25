@@ -126,7 +126,18 @@ return {
 								buffer = buf,
 								command = ":!dotnet csharpier %",
 							})
+
+							vim.api.nvim_buf_set_keymap(
+								buf,
+								"n",
+								"<leader>ca",
+								"<cmd>lua vim.lsp.buf.code_action()<CR>",
+								{}
+							)
+							vim.api.nvim_buf_set_keymap(buf, "n", "gD", "<cmd>lua vim.lsp.buf.declaration()<CR>", {})
+							vim.api.nvim_buf_set_keymap(buf, "n", "gd", "<cmd>lua vim.lsp.buf.definition()<CR>", {})
 						end,
+
 						-- handlers = {
 						-- 	["textDocument/definition"] = require("omnisharp_extended").handler,
 						-- },
