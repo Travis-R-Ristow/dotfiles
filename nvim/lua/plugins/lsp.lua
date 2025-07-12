@@ -1,188 +1,231 @@
 local function read_luacheck_globals()
-	local globals = {}
-	local luacheckrc = io.open(".luacheckrc", "r")
-	if luacheckrc then
-		for line in luacheckrc:lines() do
-			for global in line:gmatch('"%s*(%w+)%s*"') do
-				table.insert(globals, global)
-			end
-		end
-		luacheckrc:close()
-	end
-	return globals
+  local globals = {}
+  local luacheckrc = io.open(vim.fn.stdpath("config") .. "/.luacheckrc", "r")
+  if luacheckrc then
+    for line in luacheckrc:lines() do
+      for global in line:gmatch('"%s*(%w+)%s*"') do
+        table.insert(globals, global)
+      end
+    end
+    luacheckrc:close()
+  end
+  return globals
 end
 
 return {
-	{
-		"williamboman/mason.nvim",
-		dependencies = {
-			"williamboman/mason-lspconfig.nvim",
-		},
-		config = function()
-			local mason = require("mason")
-			local lspconfig = require("mason-lspconfig")
+  {
+    "mason-org/mason.nvim",
+    config = function()
+      local mason = require("mason")
 
-			mason.setup()
-			lspconfig.setup({
-				indent = { enable = true },
-				automatic_installation = {
-					"lua_ls",
-					"cspell",
-				},
-				ensure_installed = {
-					"ts_ls",
-					"html",
-					"cssls",
-					"lua_ls",
-					"graphql",
-				},
-			})
-		end,
-	},
-	{
-		"neovim/nvim-lspconfig",
-		event = { "BufReadPre", "BufNewFile" },
-		dependencies = {
-			"hrsh7th/cmp-nvim-lsp",
-			{ "folke/neodev.nvim", opts = {} },
-		},
-		config = function()
-			local lspconfig = require("lspconfig")
-			local mason_lspconfig = require("mason-lspconfig")
-			local capabilities = require("cmp_nvim_lsp").default_capabilities()
+      mason.setup({
+        ensure_installed = {
+          "lua-language-server",
+          "typescript-language-server",
+          "html-lsp",
+          "css-lsp",
+          "eslint",
+        },
+        registries = {
+          "github:mason-org/mason-registry",
+          "github:Crashdummyy/mason-registry",
+        },
+      })
+    end,
+  },
+  {
+    'seblyng/roslyn.nvim',
+    ft = "cs",
+    opts = {}
+  },
+  {
+    "neovim/nvim-lspconfig",
+    event = { "BufReadPre", "BufNewFile" },
+    dependencies = {
+      "hrsh7th/cmp-nvim-lsp",
+      { "folke/neodev.nvim", opts = {} },
+    },
+    config = function()
+      local lspconfig = require("lspconfig")
+      local capabilities = require("cmp_nvim_lsp").default_capabilities()
 
-			vim.api.nvim_create_autocmd("LspAttach", {
-				group = vim.api.nvim_create_augroup("UserLspConfig", {}),
-				callback = function()
-					vim.keymap.set("n", "gd", "<cmd>Telescope lsp_definitions<CR>")
-				end,
-			})
+      vim.api.nvim_create_autocmd("LspAttach", {
+        group = vim.api.nvim_create_augroup("UserLspConfig", {}),
+        callback = function(event)
+          local buf = event.buf
+          local client = vim.lsp.get_client_by_id(event.data.client_id)
 
-			mason_lspconfig.setup_handlers({
-				function(server_name)
-					lspconfig[server_name].setup({
-						capabilities = capabilities,
-					})
-				end,
-				["ts_ls"] = function()
-					lspconfig.ts_ls.setup({
-						capabilities = capabilities,
-						root_dir = function(fname)
-							return vim.fs.dirname(vim.fs.find(".git", { path = fname, upward = true })[1])
-						end,
-						init_options = {
-							preferences = {
-								importModuleSpecifierPreference = "relative",
-							},
-						},
-					})
-				end,
-				["eslint"] = function(server_name)
-					lspconfig[server_name].setup({
-						capabilities = capabilities,
-						filetype = {
-							"javascript",
-							"typescript",
-							"javascriptreact",
-							"typescriptreact",
-							"typescript.tsx",
-							"javascript.jsx",
-						},
-						on_attach = function(client, buf)
-							vim.api.nvim_create_autocmd("BufWritePre", {
-								buffer = buf,
-								command = "EslintFixAll",
-							})
-						end,
-					})
-				end,
-				["lua_ls"] = function(server_name)
-					lspconfig[server_name].setup({
-						settings = {
-							Lua = {
-								diagnostics = {
-									globals = read_luacheck_globals(),
-								},
-							},
-						},
-					})
-				end,
-				["omnisharp"] = function(server_name)
-					lspconfig[server_name].setup({
-						capabilities = capabilities,
-						root_dir = function(fname)
-							return vim.fs.dirname(vim.fs.find(".git", { path = fname, upward = true })[1])
-						end,
-						cmd = {
-							"/Users/TRistow/.local/share/nvim/mason/bin/omnisharp",
-							"--languageserver",
-							"--hostPID",
-							tostring(vim.fn.getpid()),
-						},
-						on_attach = function(client, buf)
-							client.server_capabilities.semanticTokensProvider = nil
+          if client and client.name == "ts_ls" then
+            vim.defer_fn(function()
+              local root = client.config.root_dir
+              if root then
+                local files_to_preload = vim.fn.glob(root .. "/**/*.{ts,tsx,js,jsx}", true, true)
 
-							vim.api.nvim_create_autocmd("BufWritePost", {
-								buffer = buf,
-								command = ":!dotnet csharpier %",
-							})
+                local filtered_files = {}
+                for _, file in ipairs(files_to_preload) do
+                  if not file:match("node_modules") and
+                      not file:match("%.git/") and
+                      not file:match("dist/") and
+                      not file:match("build/") then
+                    table.insert(filtered_files, file)
+                  end
+                end
 
-							vim.api.nvim_buf_set_keymap(
-								buf,
-								"n",
-								"<leader>ca",
-								"<cmd>lua vim.lsp.buf.code_action()<CR>",
-								{}
-							)
-							vim.api.nvim_buf_set_keymap(buf, "n", "gD", "<cmd>lua vim.lsp.buf.declaration()<CR>", {})
-							vim.api.nvim_buf_set_keymap(buf, "n", "gd", "<cmd>lua vim.lsp.buf.definition()<CR>", {})
-						end,
+                local function load_files_async(files, index)
+                  if index > #files then return end
 
-						-- handlers = {
-						-- 	["textDocument/definition"] = require("omnisharp_extended").handler,
-						-- },
-						settings = {
-							FormattingOptions = {
-								-- Enables support for reading code style, naming convention and analyzer
-								-- settings from .editorconfig.
-								EnableEditorConfigSupport = true,
-								-- Specifies whether 'using' directives should be grouped and sorted during
-								-- document formatting.
-								OrganizeImports = true,
-							},
-							MsBuild = {
-								-- If true, MSBuild project system will only load projects for files that
-								-- were opened in the editor. This setting is useful for big C# codebases
-								-- and allows for faster initialization of code navigation features only
-								-- for projects that are relevant to code that is being edited. With this
-								-- setting enabled OmniSharp may load fewer projects and may thus display
-								-- incomplete reference lists for symbols.
-								LoadProjectsOnDemand = false,
-							},
-							RoslynExtensionsOptions = {
-								-- Enables support for roslyn analyzers, code fixes and rulesets.
-								-- EnableAnalyzersSupport = true,
-								-- Enables support for showing unimported types and unimported extension
-								-- methods in completion lists. When committed, the appropriate using
-								-- directive will be added at the top of the current file. This option can
-								-- have a negative impact on initial completion responsiveness,
-								-- particularly for the first few completion sessions after opening a
-								-- solution.
-								EnableImportCompletion = true,
-								-- Only run analyzers against open files when 'enableRoslynAnalyzers' is
-								-- true
-								AnalyzeOpenDocumentsOnly = false,
-								EnableAnalyzersSupport = true,
-							},
-							Sdk = {
-								-- Specifies whether to include preview versions of the .NET SDK when
-								-- determining which version to use for project loading.
-								IncludePrereleases = true,
-							},
-						},
-					})
-				end,
-			})
-		end,
-	},
+                  vim.schedule(function()
+                    if files[index] then
+                      vim.fn.bufload(files[index])
+
+                      vim.defer_fn(function()
+                        load_files_async(files, index + 1)
+                      end, 10)
+                    end
+                  end)
+                end
+
+                if #filtered_files > 0 then
+                  load_files_async(filtered_files, 1)
+                end
+              end
+            end, 4200)
+          end
+
+          vim.keymap.set("n", "gd", "<cmd>lua vim.lsp.buf.definition()<CR>", { buffer = buf })
+          vim.keymap.set("n", "gD", "<cmd>lua vim.lsp.buf.declaration()<CR>", { buffer = buf })
+          vim.keymap.set("n", "gr", "<cmd>lua vim.lsp.buf.references()<CR>", { buffer = buf })
+          vim.keymap.set("n", "<leader>gi", "<cmd>lua vim.lsp.buf.implementation()<CR>", { buffer = buf })
+          vim.keymap.set("n", "<leader>ca", "<cmd>lua vim.lsp.buf.code_action()<CR>", { buffer = buf })
+        end,
+      })
+
+      local servers = {
+        ts_ls = {
+          capabilities = capabilities,
+          root_dir = function(fname)
+            return vim.fs.dirname(vim.fs.find({ "tsconfig.json", "package.json", "jsconfig.json", ".git" },
+              { path = fname, upward = true })[1])
+          end,
+          init_options = {
+            hostInfo = "neovim",
+            preferences = {
+              importModuleSpecifierPreference = "relative",
+              includePackageJsonAutoImports = "auto",
+              includeCompletionsForModuleExports = true,
+            },
+          },
+          settings = {
+            typescript = {
+              preferences = {
+                includePackageJsonAutoImports = "auto",
+              },
+              suggest = {
+                autoImports = true,
+              },
+              exclude = {
+                "**/node_modules/**",
+                "**/dist/**",
+                "**/build/**",
+              },
+              enableProjectDiagnostics = true,
+              disableAutomaticTypingAcquisition = false,
+              inlayHints = {
+                includeInlayParameterNameHints = "all",
+                includeInlayParameterNameHintsWhenArgumentMatchesName = false,
+                includeInlayFunctionParameterTypeHints = true,
+                includeInlayVariableTypeHints = true,
+                includeInlayPropertyDeclarationTypeHints = true,
+                includeInlayFunctionLikeReturnTypeHints = true,
+                includeInlayEnumMemberValueHints = true,
+              },
+            },
+            javascript = {
+              enableProjectDiagnostics = true,
+              inlayHints = {
+                includeInlayParameterNameHints = "all",
+                includeInlayParameterNameHintsWhenArgumentMatchesName = false,
+                includeInlayFunctionParameterTypeHints = true,
+                includeInlayVariableTypeHints = true,
+                includeInlayPropertyDeclarationTypeHints = true,
+                includeInlayFunctionLikeReturnTypeHints = true,
+                includeInlayEnumMemberValueHints = true,
+              },
+            },
+          },
+          flags = {
+            debounce_text_changes = 150,
+          },
+        },
+        eslint = {
+          capabilities = capabilities,
+          filetypes = {
+            "javascript",
+            "typescript",
+            "javascriptreact",
+            "typescriptreact",
+            "typescript.tsx",
+            "javascript.jsx",
+          },
+          on_attach = function(client, buf)
+            vim.api.nvim_create_autocmd("BufWritePre", {
+              buffer = buf,
+              command = "EslintFixAll",
+            })
+          end,
+        },
+        lua_ls = {
+          capabilities = capabilities,
+          settings = {
+            Lua = {
+              diagnostics = {
+                globals = read_luacheck_globals(),
+              },
+            },
+          },
+        },
+        -- omnisharp = {
+        --   capabilities = capabilities,
+        --   root_dir = function(fname)
+        --     return vim.fs.dirname(vim.fs.find({ "*.sln", "*.csproj", ".git" }, { path = fname, upward = true })[1])
+        --   end,
+        --   cmd = {
+        --     "/home/building/.local/share/nvim/mason/bin/OmniSharp",
+        --     "--languageserver",
+        --     "--hostPID",
+        --     tostring(vim.fn.getpid()),
+        --   },
+        --   on_attach = function(client, buf)
+        --     -- client.server_capabilities.semanticTokensProvider = nil
+        --
+        --     vim.api.nvim_create_autocmd("BufWritePost", {
+        --       buffer = buf,
+        --       command = ":!dotnet csharpier %",
+        --     })
+        --   end,
+        --   settings = {
+        --     FormattingOptions = {
+        --       EnableEditorConfigSupport = true,
+        --       OrganizeImports = true,
+        --     },
+        --     MsBuild = {
+        --       LoadProjectsOnDemand = false,
+        --     },
+        --     RoslynExtensionsOptions = {
+        --       EnableImportCompletion = true,
+        --       AnalyzeOpenDocumentsOnly = false,
+        --       EnableAnalyzersSupport = true,
+        --     },
+        --     Sdk = {
+        --       IncludePrereleases = true,
+        --     },
+        --   },
+        -- },
+      }
+
+      for server_name, config in pairs(servers) do
+        lspconfig[server_name].setup(config)
+      end
+    end,
+  },
 }
