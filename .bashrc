@@ -28,7 +28,7 @@ __get_git() {
   if git rev-parse --is-inside-work-tree --quiet >/dev/null 2>&1; then
     testStr+=" $(color pink "-") "
     local branchName=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
-    if [[ -n $(git status --porcelain) ]]; then
+    if [[ -n $(git log @{u}..HEAD) ]]; then
       testStr+="$(color yellow "$branchName")"
     else
       testStr+="$(color green "$branchName")"
