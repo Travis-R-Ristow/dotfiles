@@ -8,6 +8,7 @@
 alias ls='ls --color=auto'
 alias grep='grep --color=auto'
 alias cls='clear'
+alias brave='brave &'
 
 bind '"\e[A": history-search-backward'
 bind '"\e[B": history-search-forward'
