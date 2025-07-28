@@ -25,6 +25,8 @@ return {
 					"html-lsp",
 					"css-lsp",
 					"eslint",
+					"csharp_ls",
+					"roslyn",
 				},
 				registries = {
 					"github:mason-org/mason-registry",
@@ -149,6 +151,9 @@ return {
 							},
 						},
 					},
+				},
+				roslyn = {
+					capabilities = capabilities,
 				},
 			}
 
