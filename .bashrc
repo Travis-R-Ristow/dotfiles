@@ -5,10 +5,13 @@
 # If not running interactively, don't do anything
 [[ $- != *i* ]] && return
 
+export PATH="$PATH:$HOME/.dotnet/tools"
+
+alias vim='nvim'
 alias ls='ls --color=auto'
 alias grep='grep --color=auto'
 alias cls='clear'
-alias brave='brave &'
+alias brwsr='brave --password-store=detect &'
 
 bind '"\e[A": history-search-backward'
 bind '"\e[B": history-search-forward'

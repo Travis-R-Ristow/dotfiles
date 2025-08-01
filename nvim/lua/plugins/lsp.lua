@@ -35,8 +35,21 @@ return {
   },
   {
     "seblyng/roslyn.nvim",
+    dependencies = {
+      "mfussenegger/nvim-dap",
+      "rcarriga/nvim-dap-ui",
+      "nvim-neotest/nvim-nio"
+    },
     ft = "cs",
     opts = {},
+    on_attach = function()
+      vim.api.nvim_create_autocmd("BufWritePost", {
+        pattern = "*.cs",
+        callback = function()
+          vim.cmd("!dotnet build")
+        end
+      })
+    end
   },
   {
     "neovim/nvim-lspconfig",
@@ -48,17 +61,30 @@ return {
     config = function()
       local lspconfig = require("lspconfig")
       local capabilities = require("cmp_nvim_lsp").default_capabilities()
+      local dap = require("dap")
+      local dapui = require("dapui")
 
       vim.api.nvim_create_autocmd("LspAttach", {
         group = vim.api.nvim_create_augroup("UserLspConfig", {}),
         callback = function(event)
           local buf = event.buf
 
-          vim.keymap.set("n", "gd", "<cmd>lua vim.lsp.buf.definition()<CR>", { buffer = buf })
-          vim.keymap.set("n", "gD", "<cmd>lua vim.lsp.buf.declaration()<CR>", { buffer = buf })
-          vim.keymap.set("n", "gr", "<cmd>lua vim.lsp.buf.references()<CR>", { buffer = buf })
-          vim.keymap.set("n", "<leader>gi", "<cmd>lua vim.lsp.buf.implementation()<CR>", { buffer = buf })
-          vim.keymap.set("n", "<leader>ca", "<cmd>lua vim.lsp.buf.code_action()<CR>", { buffer = buf })
+          vim.keymap.set("n", "gd", "<cmd>lua vim.lsp.buf.definition()<CR>",
+            { buffer = buf })
+          vim.keymap.set("n", "gD", "<cmd>lua vim.lsp.buf.declaration()<CR>",
+            { buffer = buf })
+          vim.keymap.set("n", "gr", "<cmd>lua vim.lsp.buf.references()<CR>",
+            { buffer = buf })
+          vim.keymap.set("n", "<leader>gi", "<cmd>lua vim.lsp.buf.implementation()<CR>",
+            { buffer = buf })
+          vim.keymap.set("n", "<leader>ca", "<cmd>lua vim.lsp.buf.code_action()<CR>",
+            { buffer = buf })
+          vim.keymap.set("n", "<F5>", dap.continue, { buffer = buf })
+          vim.keymap.set("n", "<F10>", dap.step_over, { buffer = buf })
+          vim.keymap.set("n", "<F11>", dap.step_into, { buffer = buf })
+          vim.keymap.set("n", "<leader>b", dap.toggle_breakpoint, { buffer = buf })
+          vim.keymap.set("n", "<leader>dr", dap.repl.open, { buffer = buf })
+          vim.keymap.set("n", "<leader>dbu", dapui.toggle, { buffer = buf })
         end,
       })
 
@@ -68,7 +94,8 @@ return {
           root_dir = function(fname)
             return vim.fs.dirname(
               vim.fs.find(
-                { "tsconfig.json", "package.json", "jsconfig.json", ".git" },
+                { "tsconfig.json", "package.json", "jsconfig.json",
+                  ".git" },
                 { path = fname, upward = true }
               )[1]
             )
