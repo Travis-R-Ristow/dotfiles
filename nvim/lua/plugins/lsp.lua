@@ -24,7 +24,6 @@ return {
 					"typescript-language-server",
 					"html-lsp",
 					"css-lsp",
-					"eslint",
 				},
 				registries = {
 					"github:mason-org/mason-registry",
@@ -84,16 +83,41 @@ return {
 			})
 
 			local servers = {
-				biome = {
+				-- biome = {
+				-- 	capabilities = capabilities,
+				-- 	root_dir = function(fname)
+				-- 		return vim.fs.dirname(
+				-- 			vim.fs.find(
+				-- 				{ "tsconfig.json", "package.json", "jsconfig.json", ".git" },
+				-- 				{ path = fname, upward = true }
+				-- 			)[1]
+				-- 		)
+				-- 	end,
+				-- 	on_attach = function(client, bufnr)
+				-- 		vim.api.nvim_create_autocmd("BufWritePre", {
+				-- 			group = vim.api.nvim_create_augroup("FormatOnSave", { clear = true }),
+				-- 			buffer = bufnr,
+				-- 			callback = function()
+				-- 				vim.lsp.buf.format({ async = false, timeout_ms = 10000 })
+				-- 			end,
+				-- 		})
+				--
+				-- 		if client.name == "biome" then
+				-- 			vim.api.nvim_create_autocmd("BufWritePre", {
+				-- 				group = vim.api.nvim_create_augroup("BiomeFixOnSave", { clear = true }),
+				-- 				buffer = bufnr,
+				-- 				callback = function()
+				-- 					vim.lsp.buf.code_action({
+				-- 						context = { diagnostics = {}, only = { "source.fixAll.biome" } },
+				-- 						apply = true,
+				-- 					})
+				-- 				end,
+				-- 			})
+				-- 		end
+				-- 	end,
+				-- },
+				cssls = {
 					capabilities = capabilities,
-					root_dir = function(fname)
-						return vim.fs.dirname(
-							vim.fs.find(
-								{ "tsconfig.json", "package.json", "jsconfig.json", ".git" },
-								{ path = fname, upward = true }
-							)[1]
-						)
-					end,
 				},
 				ts_ls = {
 					capabilities = capabilities,
@@ -155,23 +179,23 @@ return {
 						debounce_text_changes = 150,
 					},
 				},
-				-- eslint = {
-				-- 	capabilities = capabilities,
-				-- 	filetypes = {
-				-- 		"javascript",
-				-- 		"typescript",
-				-- 		"javascriptreact",
-				-- 		"typescriptreact",
-				-- 		"typescript.tsx",
-				-- 		"javascript.jsx",
-				-- 	},
-				-- 	on_attach = function(client, buf)
-				-- 		vim.api.nvim_create_autocmd("BufWritePre", {
-				-- 			buffer = buf,
-				-- 			command = "EslintFixAll",
-				-- 		})
-				-- 	end,
-				-- },
+				eslint = {
+					capabilities = capabilities,
+					filetypes = {
+						"javascript",
+						"typescript",
+						"javascriptreact",
+						"typescriptreact",
+						"typescript.tsx",
+						"javascript.jsx",
+					},
+					on_attach = function(client, buf)
+						vim.api.nvim_create_autocmd("BufWritePre", {
+							buffer = buf,
+							command = "EslintFixAll",
+						})
+					end,
+				},
 				lua_ls = {
 					capabilities = capabilities,
 					settings = {
