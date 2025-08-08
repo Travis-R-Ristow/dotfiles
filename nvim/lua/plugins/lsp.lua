@@ -25,7 +25,6 @@ return {
 					"html-lsp",
 					"css-lsp",
 					"eslint",
-					"csharp_ls",
 					"roslyn",
 				},
 				registries = {
@@ -37,8 +36,20 @@ return {
 	},
 	{
 		"seblyng/roslyn.nvim",
+		dependencies = {
+			"mfussenegger/nvim-dap",
+			"rcarriga/nvim-dap-ui",
+			"nvim-neotest/nvim-nio",
+		},
 		ft = "cs",
-		opts = {},
+		opts = {
+			on_attach = function(client, buf)
+				vim.api.nvim_create_autocmd("BufWritePost", {
+					buffer = buf,
+					command = ":!dotnet csharpier %",
+				})
+			end,
+		},
 	},
 	{
 		"neovim/nvim-lspconfig",
@@ -50,17 +61,44 @@ return {
 		config = function()
 			local lspconfig = require("lspconfig")
 			local capabilities = require("cmp_nvim_lsp").default_capabilities()
+			local dap = require("dap")
+			local dapUi = require("dapui")
+
+			dap.adapters.coreclr = {
+				type = "executable",
+				command = "/opt/netcoredbg/netcoredbg/bin/netcoredbg",
+				args = { "--interpreter=vscode" },
+			}
+
+			dap.configurations.cs = {
+				{
+					type = "coreclr",
+					name = "launch - netcoredbg",
+					request = "launch",
+					program = function()
+						return vim.fn.input("Path to dll", vim.fn.getcwd(), "file")
+					end,
+				},
+			}
+
+			dapUi.setup()
 
 			vim.api.nvim_create_autocmd("LspAttach", {
 				group = vim.api.nvim_create_augroup("UserLspConfig", {}),
 				callback = function(event)
 					local buf = event.buf
 
-					vim.keymap.set("n", "gd", "<cmd>lua vim.lsp.buf.definition()<CR>", { buffer = buf })
-					vim.keymap.set("n", "gD", "<cmd>lua vim.lsp.buf.declaration()<CR>", { buffer = buf })
-					vim.keymap.set("n", "gr", "<cmd>lua vim.lsp.buf.references()<CR>", { buffer = buf })
-					vim.keymap.set("n", "<leader>gi", "<cmd>lua vim.lsp.buf.implementation()<CR>", { buffer = buf })
-					vim.keymap.set("n", "<leader>ca", "<cmd>lua vim.lsp.buf.code_action()<CR>", { buffer = buf })
+					vim.keymap.set("n", "gd", vim.lsp.buf.definition, { buffer = buf })
+					vim.keymap.set("n", "gD", vim.lsp.buf.declaration, { buffer = buf })
+					vim.keymap.set("n", "gr", vim.lsp.buf.references, { buffer = buf })
+					vim.keymap.set("n", "<leader>gi", vim.lsp.buf.implementation, { buffer = buf })
+					vim.keymap.set("n", "<leader>ca", vim.lsp.buf.code_action, { buffer = buf })
+					vim.keymap.set("n", "<F5>", dap.continue, { buffer = buf })
+					vim.keymap.set("n", "<F10>", dap.step_over, { buffer = buf })
+					vim.keymap.set("n", "<F11>", dap.step_into, { buffer = buf })
+					vim.keymap.set("n", "<leader>b", dap.toggle_breakpoint, { buffer = buf })
+					vim.keymap.set("n", "<leader>dr", dap.repl.open, { buffer = buf })
+					vim.keymap.set("n", "<leader>dbu", dapUi.toggle, { buffer = buf })
 				end,
 			})
 
@@ -151,9 +189,6 @@ return {
 							},
 						},
 					},
-				},
-				roslyn = {
-					capabilities = capabilities,
 				},
 			}
 

@@ -23,7 +23,8 @@ opt.spelloptions = "camel"
 
 vim.keymap.set({ "v", "n" }, "y", '"zy')
 vim.keymap.set({ "v", "n" }, "p", '"zp')
-vim.keymap.set({ "v", "n" }, "P", '"0p')
+vim.keymap.set({ "v", "n" }, "x", '"zx')
+vim.keymap.set({ "v" }, "Y", '"+y')
 
 vim.keymap.set({ "v", "n" }, "<leader>yl", ":registers<CR>")
 
