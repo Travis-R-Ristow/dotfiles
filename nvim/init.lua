@@ -18,13 +18,13 @@ opt.spelllang = "en_us"
 opt.spelloptions = "camel"
 
 -- KeyBind / Remaps
--- vim.keymap.set("n", "<Home>", "^", { silent = true })
--- vim.keymap.set("n", "<End>", "$", { silent = true })
 
-vim.keymap.set({ "v", "n" }, "y", '"zy')
-vim.keymap.set({ "v", "n" }, "p", '"zp')
-vim.keymap.set({ "v", "n" }, "x", '"zx')
-vim.keymap.set({ "v" }, "Y", '"+y')
+vim.keymap.set("n", "<C-Left>", "^")
+vim.keymap.set("n", "<C-Right>", "$")
+
+vim.keymap.set({ "v", "n" }, "y", '"*y')
+vim.keymap.set({ "v", "n" }, "p", '"*p')
+vim.keymap.set({ "v", "n" }, "x", '"*x')
 
 vim.keymap.set({ "v", "n" }, "<leader>yl", ":registers<CR>")
 
@@ -48,6 +48,10 @@ end, {})
 
 vim.api.nvim_create_user_command("Wall", function()
 	vim.cmd("wall")
+end, {})
+
+vim.api.nvim_create_user_command("chrome", function()
+	vim.cmd("open -a 'Google Chrome'")
 end, {})
 
 vim.cmd("let g:netrw_liststyle = 3")

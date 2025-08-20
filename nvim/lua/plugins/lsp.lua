@@ -42,14 +42,7 @@ return {
 			"nvim-neotest/nvim-nio",
 		},
 		ft = "cs",
-		opts = {
-			on_attach = function(client, buf)
-				vim.api.nvim_create_autocmd("BufWritePost", {
-					buffer = buf,
-					command = ":!dotnet csharpier %",
-				})
-			end,
-		},
+		opts = {},
 	},
 	{
 		"neovim/nvim-lspconfig",
@@ -73,10 +66,14 @@ return {
 			dap.configurations.cs = {
 				{
 					type = "coreclr",
-					name = "launch - netcoredbg",
-					request = "launch",
-					program = function()
-						return vim.fn.input("Path to dll", vim.fn.getcwd(), "file")
+					name = "attach process",
+					request = "attach",
+					processId = function()
+						return require("dap.utils").pick_process({
+							filter = function(proc)
+								return proc.name:match("dotnet")
+							end,
+						})
 					end,
 				},
 			}
@@ -99,6 +96,11 @@ return {
 					vim.keymap.set("n", "<leader>b", dap.toggle_breakpoint, { buffer = buf })
 					vim.keymap.set("n", "<leader>dr", dap.repl.open, { buffer = buf })
 					vim.keymap.set("n", "<leader>dbu", dapUi.toggle, { buffer = buf })
+
+					vim.api.nvim_create_autocmd("BufWritePost", {
+						pattern = { "*.cs" },
+						command = ":!dotnet csharpier %",
+					})
 				end,
 			})
 
