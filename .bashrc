@@ -7,6 +7,8 @@
 
 export PATH="$PATH:$HOME/.dotnet/tools"
 
+export EDITOR="nvim"
+
 alias vim='nvim'
 alias ls='ls --color=auto'
 alias grep='grep --color=auto'
