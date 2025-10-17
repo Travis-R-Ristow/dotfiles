@@ -10,6 +10,15 @@ return {
 		local telescope = require("telescope")
 		local builtin = require("telescope.builtin")
 		telescope.setup({
+			defaults = {
+				path_display = {
+					shorten = 8,
+				},
+				layout_config = {
+					height = 0.9,
+					width = 0.95,
+				},
+			},
 			extensions = {
 				fzf = {
 					fuzzy = true, -- false will only do exact matching

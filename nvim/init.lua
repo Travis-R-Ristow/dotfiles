@@ -1,6 +1,8 @@
+-- vim.g.loaded_netrw = 1
+-- vim.g.loaded_netrwPlugin = 1
+
 require("lazyPlugins")
 
--- Options
 local opt = vim.opt
 
 opt.relativenumber = true
@@ -50,8 +52,6 @@ vim.api.nvim_create_user_command("Wall", function()
 	vim.cmd("wall")
 end, {})
 
-vim.api.nvim_create_user_command("chrome", function()
+vim.api.nvim_create_user_command("Chrome", function()
 	vim.cmd("open -a 'Google Chrome'")
 end, {})
-
-vim.cmd("let g:netrw_liststyle = 3")
