@@ -45,14 +45,14 @@ return {
 		opts = {},
 	},
 	{
-		"neovim/nvim-lspconfig",
+		"folke/lazydev.nvim",
+		ft = "lua",
+		opts = {},
+	},
+	{
+		"hrsh7th/cmp-nvim-lsp",
 		event = { "BufReadPre", "BufNewFile" },
-		dependencies = {
-			"hrsh7th/cmp-nvim-lsp",
-			{ "folke/neodev.nvim", opts = {} },
-		},
 		config = function()
-			local lspconfig = require("lspconfig")
 			local capabilities = require("cmp_nvim_lsp").default_capabilities()
 			local dap = require("dap")
 			local dapUi = require("dapui")
@@ -104,99 +104,112 @@ return {
 				end,
 			})
 
-			local servers = {
-				ts_ls = {
-					capabilities = capabilities,
-					root_dir = function(fname)
-						return vim.fs.dirname(
-							vim.fs.find(
-								{ "tsconfig.json", "package.json", "jsconfig.json", ".git" },
-								{ path = fname, upward = true }
-							)[1]
-						)
-					end,
-					init_options = {
-						hostInfo = "neovim",
+			vim.lsp.config("ts_ls", {
+				cmd = { "typescript-language-server", "--stdio" },
+				filetypes = { "javascript", "javascriptreact", "javascript.jsx", "typescript", "typescriptreact", "typescript.tsx" },
+				capabilities = capabilities,
+				root_markers = { "tsconfig.json", "package.json", "jsconfig.json", ".git" },
+				init_options = {
+					hostInfo = "neovim",
+					preferences = {
+						importModuleSpecifierPreference = "relative",
+						includePackageJsonAutoImports = "auto",
+						includeCompletionsForModuleExports = true,
+					},
+				},
+				settings = {
+					typescript = {
 						preferences = {
-							importModuleSpecifierPreference = "relative",
 							includePackageJsonAutoImports = "auto",
-							includeCompletionsForModuleExports = true,
+						},
+						suggest = {
+							autoImports = true,
+						},
+						exclude = {
+							"**/node_modules/**",
+							"**/dist/**",
+							"**/build/**",
+						},
+						enableProjectDiagnostics = true,
+						disableAutomaticTypingAcquisition = false,
+						inlayHints = {
+							includeInlayParameterNameHints = "all",
+							includeInlayParameterNameHintsWhenArgumentMatchesName = false,
+							includeInlayFunctionParameterTypeHints = true,
+							includeInlayVariableTypeHints = true,
+							includeInlayPropertyDeclarationTypeHints = true,
+							includeInlayFunctionLikeReturnTypeHints = true,
+							includeInlayEnumMemberValueHints = true,
 						},
 					},
-					settings = {
-						typescript = {
-							preferences = {
-								includePackageJsonAutoImports = "auto",
-							},
-							suggest = {
-								autoImports = true,
-							},
-							exclude = {
-								"**/node_modules/**",
-								"**/dist/**",
-								"**/build/**",
-							},
-							enableProjectDiagnostics = true,
-							disableAutomaticTypingAcquisition = false,
-							inlayHints = {
-								includeInlayParameterNameHints = "all",
-								includeInlayParameterNameHintsWhenArgumentMatchesName = false,
-								includeInlayFunctionParameterTypeHints = true,
-								includeInlayVariableTypeHints = true,
-								includeInlayPropertyDeclarationTypeHints = true,
-								includeInlayFunctionLikeReturnTypeHints = true,
-								includeInlayEnumMemberValueHints = true,
-							},
-						},
-						javascript = {
-							enableProjectDiagnostics = true,
-							inlayHints = {
-								includeInlayParameterNameHints = "all",
-								includeInlayParameterNameHintsWhenArgumentMatchesName = false,
-								includeInlayFunctionParameterTypeHints = true,
-								includeInlayVariableTypeHints = true,
-								includeInlayPropertyDeclarationTypeHints = true,
-								includeInlayFunctionLikeReturnTypeHints = true,
-								includeInlayEnumMemberValueHints = true,
-							},
-						},
-					},
-					flags = {
-						debounce_text_changes = 150,
-					},
-				},
-				eslint = {
-					capabilities = capabilities,
-					filetypes = {
-						"javascript",
-						"typescript",
-						"javascriptreact",
-						"typescriptreact",
-						"typescript.tsx",
-						"javascript.jsx",
-					},
-					on_attach = function(client, buf)
-						vim.api.nvim_create_autocmd("BufWritePre", {
-							buffer = buf,
-							command = "EslintFixAll",
-						})
-					end,
-				},
-				lua_ls = {
-					capabilities = capabilities,
-					settings = {
-						Lua = {
-							diagnostics = {
-								globals = read_luacheck_globals(),
-							},
+					javascript = {
+						enableProjectDiagnostics = true,
+						inlayHints = {
+							includeInlayParameterNameHints = "all",
+							includeInlayParameterNameHintsWhenArgumentMatchesName = false,
+							includeInlayFunctionParameterTypeHints = true,
+							includeInlayVariableTypeHints = true,
+							includeInlayPropertyDeclarationTypeHints = true,
+							includeInlayFunctionLikeReturnTypeHints = true,
+							includeInlayEnumMemberValueHints = true,
 						},
 					},
 				},
-			}
+				flags = {
+					debounce_text_changes = 150,
+				},
+			})
 
-			for server_name, config in pairs(servers) do
-				lspconfig[server_name].setup(config)
-			end
+			vim.lsp.config("eslint", {
+				cmd = { "vscode-eslint-language-server", "--stdio" },
+				capabilities = capabilities,
+				root_markers = { ".eslintrc", ".eslintrc.js", ".eslintrc.json", ".eslintrc.yaml", ".eslintrc.yml", "eslint.config.js", "eslint.config.mjs", "package.json" },
+				filetypes = {
+					"javascript",
+					"typescript",
+					"javascriptreact",
+					"typescriptreact",
+					"typescript.tsx",
+					"javascript.jsx",
+				},
+				settings = {
+					validate = "on",
+					packageManager = nil,
+					useESLintClass = false,
+					experimental = { useFlatConfig = false },
+					codeActionOnSave = { enable = false, mode = "all" },
+					format = true,
+					quiet = false,
+					onIgnoredFiles = "off",
+					rulesCustomizations = {},
+					run = "onType",
+					problems = { shortenToSingleLine = false },
+					nodePath = "",
+					workingDirectory = { mode = "auto" },
+				},
+				on_attach = function(client, buf)
+					vim.api.nvim_create_autocmd("BufWritePre", {
+						buffer = buf,
+						command = "EslintFixAll",
+					})
+				end,
+			})
+
+			vim.lsp.config("lua_ls", {
+				cmd = { "lua-language-server" },
+				filetypes = { "lua" },
+				capabilities = capabilities,
+				root_markers = { ".luarc.json", ".luarc.jsonc", ".luacheckrc", ".stylua.toml", "stylua.toml", ".git" },
+				settings = {
+					Lua = {
+						diagnostics = {
+							globals = read_luacheck_globals(),
+						},
+					},
+				},
+			})
+
+			vim.lsp.enable({ "ts_ls", "eslint", "lua_ls" })
 		end,
 	},
 }
