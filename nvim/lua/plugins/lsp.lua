@@ -86,9 +86,8 @@ return {
 					local buf = event.buf
 
 					vim.keymap.set("n", "gd", vim.lsp.buf.definition, { buffer = buf })
-					vim.keymap.set("n", "gD", vim.lsp.buf.declaration, { buffer = buf })
+					vim.keymap.set("n", "gD", vim.lsp.buf.implementation, { buffer = buf })
 					vim.keymap.set("n", "gr", vim.lsp.buf.references, { buffer = buf })
-					vim.keymap.set("n", "<leader>gi", vim.lsp.buf.implementation, { buffer = buf })
 					vim.keymap.set("n", "<leader>ca", vim.lsp.buf.code_action, { buffer = buf })
 					vim.keymap.set("n", "<F5>", dap.continue, { buffer = buf })
 					vim.keymap.set("n", "<F10>", dap.step_over, { buffer = buf })
