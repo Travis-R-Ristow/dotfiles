@@ -189,7 +189,18 @@ return {
 				on_attach = function(client, buf)
 					vim.api.nvim_create_autocmd("BufWritePre", {
 						buffer = buf,
-						command = "EslintFixAll",
+						callback = function()
+							local params = {
+								command = "eslint.applyAllFixes",
+								arguments = {
+									{
+										uri = vim.uri_from_bufnr(buf),
+										version = vim.lsp.util.buf_versions[buf],
+									},
+								},
+							}
+							client:request_sync("workspace/executeCommand", params, 3000, buf)
+						end,
 					})
 				end,
 			})
