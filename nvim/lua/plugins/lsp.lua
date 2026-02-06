@@ -184,7 +184,7 @@ return {
 					run = "onType",
 					problems = { shortenToSingleLine = false },
 					nodePath = "",
-					workingDirectory = { mode = "auto" },
+					workingDirectory = { mode = "location" },
 				},
 				on_attach = function(client, buf)
 					vim.api.nvim_create_autocmd("BufWritePre", {
