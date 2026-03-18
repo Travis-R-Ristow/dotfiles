@@ -53,44 +53,44 @@ return {
         group = vim.api.nvim_create_augroup("UserLspConfig", {}),
         callback = function(event)
           local buf = event.buf
-          local client = vim.lsp.get_client_by_id(event.data.client_id)
+          -- local client = vim.lsp.get_client_by_id(event.data.client_id)
 
-          if client and client.name == "ts_ls" then
-            vim.defer_fn(function()
-              local root = client.config.root_dir
-              if root then
-                local files_to_preload = vim.fn.glob(root .. "/**/*.{ts,tsx,js,jsx}", true, true)
-
-                local filtered_files = {}
-                for _, file in ipairs(files_to_preload) do
-                  if not file:match("node_modules") and
-                      not file:match("%.git/") and
-                      not file:match("dist/") and
-                      not file:match("build/") then
-                    table.insert(filtered_files, file)
-                  end
-                end
-
-                local function load_files_async(files, index)
-                  if index > #files then return end
-
-                  vim.schedule(function()
-                    if files[index] then
-                      vim.fn.bufload(files[index])
-
-                      vim.defer_fn(function()
-                        load_files_async(files, index + 1)
-                      end, 10)
-                    end
-                  end)
-                end
-
-                if #filtered_files > 0 then
-                  load_files_async(filtered_files, 1)
-                end
-              end
-            end, 4200)
-          end
+          -- if client and client.name == "ts_ls" then
+          --   vim.defer_fn(function()
+          --     local root = client.config.root_dir
+          --     if root then
+          --       local files_to_preload = vim.fn.glob(root .. "/**/*.{ts,tsx,js,jsx}", true, true)
+          --
+          --       local filtered_files = {}
+          --       for _, file in ipairs(files_to_preload) do
+          --         if not file:match("node_modules") and
+          --             not file:match("%.git/") and
+          --             not file:match("dist/") and
+          --             not file:match("build/") then
+          --           table.insert(filtered_files, file)
+          --         end
+          --       end
+          --
+          --       local function load_files_async(files, index)
+          --         if index > #files then return end
+          --
+          --         vim.schedule(function()
+          --           if files[index] then
+          --             vim.fn.bufload(files[index])
+          --
+          --             vim.defer_fn(function()
+          --               load_files_async(files, index + 1)
+          --             end, 10)
+          --           end
+          --         end)
+          --       end
+          --
+          --       if #filtered_files > 0 then
+          --         load_files_async(filtered_files, 1)
+          --       end
+          --     end
+          --   end, 4200)
+          -- end
 
           vim.keymap.set("n", "gd", "<cmd>lua vim.lsp.buf.definition()<CR>", { buffer = buf })
           vim.keymap.set("n", "gD", "<cmd>lua vim.lsp.buf.declaration()<CR>", { buffer = buf })
