@@ -16,19 +16,36 @@ return {
 
     require("luasnip.loaders.from_vscode").lazy_load()
 
-    vim.keymap.set("n", "z=", function()
-      local word = vim.fn.expand("<cword>")
-      local suggestions = vim.fn.spellsuggest(word, 5)
-      if #suggestions == 0 then
-        vim.notify("No spelling suggestions", vim.log.levels.INFO)
+    local spell_word = nil
+
+    local spell_source = {}
+
+    function spell_source:get_keyword_pattern()
+      return [[\k*]]
+    end
+
+    function spell_source:complete(_, callback)
+      if not spell_word then
+        callback({})
         return
       end
-      vim.ui.select(suggestions, { prompt = "Spelling: " }, function(choice)
-        if choice then
-          vim.cmd("normal! ciw" .. choice)
-          vim.cmd("stopinsert")
-        end
-      end)
+      local suggestions = vim.fn.spellsuggest(spell_word, 5)
+      local items = {}
+      for _, suggestion in ipairs(suggestions) do
+        table.insert(items, { label = suggestion })
+      end
+      callback(items)
+    end
+
+    cmp.register_source("spell", spell_source)
+
+    vim.keymap.set("n", "z=", function()
+      spell_word = vim.fn.expand("<cword>")
+      local keys = vim.api.nvim_replace_termcodes("ciw", true, false, true)
+      vim.api.nvim_feedkeys(keys, "n", false)
+      vim.defer_fn(function()
+        cmp.complete({ config = { sources = { { name = "spell" } } } })
+      end, 50)
     end, { desc = "Spelling suggestions" })
 
     cmp.setup({

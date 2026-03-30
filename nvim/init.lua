@@ -3,6 +3,8 @@
 
 require("lazyPlugins")
 
+vim.o.exrc = true
+
 local opt = vim.opt
 
 opt.relativenumber = true

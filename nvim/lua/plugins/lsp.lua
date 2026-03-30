@@ -190,16 +190,46 @@ return {
 					vim.api.nvim_create_autocmd("BufWritePre", {
 						buffer = buf,
 						callback = function()
-							local params = {
-								command = "eslint.applyAllFixes",
-								arguments = {
-									{
-										uri = vim.uri_from_bufnr(buf),
-										version = vim.lsp.util.buf_versions[buf],
+							if not vim.g.format_changed_only then
+								local params = {
+									command = "eslint.applyAllFixes",
+									arguments = {
+										{
+											uri = vim.uri_from_bufnr(buf),
+											version = vim.lsp.util.buf_versions[buf],
+										},
 									},
-								},
-							}
-							client:request_sync("workspace/executeCommand", params, 3000, buf)
+								}
+								client:request_sync("workspace/executeCommand", params, 3000, buf)
+								return
+							end
+
+							local gitsigns = package.loaded.gitsigns
+							if not gitsigns then
+								return
+							end
+
+							local hunks = gitsigns.get_hunks(buf)
+							if not hunks or #hunks == 0 then
+								return
+							end
+
+							local changed_lines = {}
+							for _, hunk in ipairs(hunks) do
+								for i = hunk.added.start, hunk.added.start + hunk.added.count - 1 do
+									changed_lines[i] = true
+								end
+							end
+
+							local diagnostics = vim.diagnostic.get(buf)
+							for _, diag in ipairs(diagnostics) do
+								if changed_lines[diag.lnum + 1] and diag.source == "eslint" then
+									vim.lsp.buf.code_action({
+										context = { diagnostics = { diag }, only = { "quickfix" } },
+										apply = true,
+									})
+								end
+							end
 						end,
 					})
 				end,
