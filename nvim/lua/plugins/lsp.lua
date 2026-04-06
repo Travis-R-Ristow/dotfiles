@@ -12,6 +12,181 @@ local function read_luacheck_globals()
 	return globals
 end
 
+local dotnet_run_job_id = nil
+local dotnet_run_pid = nil
+
+local function kill_dotnet_run()
+	if dotnet_run_pid then
+		vim.fn.jobstop(dotnet_run_job_id)
+		os.execute("kill -9 " .. dotnet_run_pid .. " 2>/dev/null")
+		local children = vim.fn.systemlist("pgrep -P " .. dotnet_run_pid)
+		for _, child_pid in ipairs(children) do
+			os.execute("kill -9 " .. child_pid .. " 2>/dev/null")
+		end
+		dotnet_run_job_id = nil
+		dotnet_run_pid = nil
+		vim.notify("Killed dotnet process", vim.log.levels.INFO)
+	else
+		vim.notify("No dotnet process running", vim.log.levels.WARN)
+	end
+end
+
+local function get_dotnet_run_status()
+	if dotnet_run_pid then
+		local result = vim.fn.system("ps -p " .. dotnet_run_pid .. " -o pid=")
+		if vim.trim(result) ~= "" then
+			return "running (PID: " .. dotnet_run_pid .. ")"
+		end
+	end
+	return "not running"
+end
+
+local function find_csproj_files()
+	local cwd = vim.fn.getcwd()
+	local files = vim.fn.globpath(cwd, "**/*.csproj", false, true)
+	return files
+end
+
+local function get_launch_profiles(csproj_path)
+	local project_dir = vim.fn.fnamemodify(csproj_path, ":h")
+	local launch_settings_path = project_dir .. "/Properties/launchSettings.json"
+	local file = io.open(launch_settings_path, "r")
+	if not file then
+		return {}
+	end
+	local content = file:read("*a")
+	file:close()
+	local ok, parsed = pcall(vim.fn.json_decode, content)
+	if not ok or not parsed or not parsed.profiles then
+		return {}
+	end
+	local profiles = {}
+	for name, _ in pairs(parsed.profiles) do
+		table.insert(profiles, name)
+	end
+	table.sort(profiles)
+	return profiles
+end
+
+local function pick_csproj(callback)
+	local files = find_csproj_files()
+	if #files == 0 then
+		vim.notify("No .csproj files found", vim.log.levels.ERROR)
+		return
+	end
+	local cwd = vim.fn.getcwd()
+	local display_files = {}
+	for _, f in ipairs(files) do
+		local display = f:gsub(cwd .. "/", "")
+		table.insert(display_files, display)
+	end
+	vim.ui.select(display_files, { prompt = "Select .csproj:" }, function(choice, idx)
+		if choice then
+			callback(files[idx])
+		end
+	end)
+end
+
+local function pick_launch_profile(csproj_path, callback)
+	local profiles = get_launch_profiles(csproj_path)
+	if #profiles == 0 then
+		vim.notify("No launch profiles found for this project", vim.log.levels.WARN)
+		callback(nil)
+		return
+	end
+	vim.ui.select(profiles, { prompt = "Select launch profile:" }, function(choice)
+		callback(choice)
+	end)
+end
+
+local function find_dotnet_child_pid(parent_pid)
+	local child_pids = vim.fn.systemlist("pgrep -P " .. parent_pid)
+	for _, pid_str in ipairs(child_pids) do
+		local pid = tonumber(pid_str)
+		if pid then
+			local proc_info = vim.fn.system("ps -p " .. pid .. " -o comm=")
+			if proc_info:match("dotnet") then
+				return pid
+			end
+		end
+	end
+	if #child_pids > 0 then
+		return tonumber(child_pids[#child_pids])
+	end
+	return nil
+end
+
+local dotnet_project_cwd = nil
+
+local function poll_and_attach(attempt)
+	local max_attempts = 50
+	attempt = attempt or 1
+
+	if not dotnet_run_pid then
+		vim.notify("dotnet process stopped", vim.log.levels.WARN)
+		return
+	end
+
+	local target_pid = find_dotnet_child_pid(dotnet_run_pid)
+
+	if target_pid then
+		vim.notify("Attaching to PID: " .. target_pid, vim.log.levels.INFO)
+		require("dap").run({
+			type = "coreclr",
+			name = "attach",
+			request = "attach",
+			processId = target_pid,
+			justMyCode = false,
+			cwd = dotnet_project_cwd,
+		})
+	elseif attempt < max_attempts then
+		vim.defer_fn(function()
+			poll_and_attach(attempt + 1)
+		end, 500)
+	else
+		vim.notify("Timeout waiting for dotnet process", vim.log.levels.ERROR)
+	end
+end
+
+local function run_dotnet_and_attach(csproj_path, launch_profile)
+	kill_dotnet_run()
+
+	local project_dir = vim.fn.fnamemodify(csproj_path, ":h")
+	dotnet_project_cwd = project_dir
+
+	local cmd = "dotnet run --project " .. vim.fn.shellescape(csproj_path) .. " -c Debug"
+	if launch_profile then
+		cmd = cmd .. " -lp " .. vim.fn.shellescape(launch_profile)
+	end
+
+	dotnet_run_job_id = vim.fn.jobstart(cmd, {
+		cwd = project_dir,
+		on_exit = function(_, code)
+			if code ~= 0 then
+				vim.notify("dotnet run exited with code " .. code, vim.log.levels.WARN)
+			end
+			dotnet_run_job_id = nil
+			dotnet_run_pid = nil
+		end,
+	})
+
+	dotnet_run_pid = vim.fn.jobpid(dotnet_run_job_id)
+	vim.notify("Started dotnet run (PID: " .. dotnet_run_pid .. ") in " .. project_dir, vim.log.levels.INFO)
+	vim.notify("Waiting 5 seconds for app to start...", vim.log.levels.INFO)
+
+	vim.defer_fn(function()
+		poll_and_attach(1)
+	end, 5000)
+end
+
+vim.api.nvim_create_user_command("DotnetRunStatus", function()
+	vim.notify("Dotnet run: " .. get_dotnet_run_status(), vim.log.levels.INFO)
+end, {})
+
+vim.api.nvim_create_user_command("DotnetRunKill", function()
+	kill_dotnet_run()
+end, {})
+
 return {
 	{
 		"mason-org/mason.nvim",
@@ -63,7 +238,28 @@ return {
 				args = { "--interpreter=vscode" },
 			}
 
+			dap.set_log_level("TRACE")
+
 			dap.configurations.cs = {
+				{
+					type = "coreclr",
+					name = "launch (pick csproj + profile)",
+					request = "attach",
+					processId = function()
+						local co = coroutine.running()
+						pick_csproj(function(csproj_path)
+							if not csproj_path then
+								coroutine.resume(co, nil)
+								return
+							end
+							pick_launch_profile(csproj_path, function(profile)
+								run_dotnet_and_attach(csproj_path, profile)
+								coroutine.resume(co, nil)
+							end)
+						end)
+						return coroutine.yield()
+					end,
+				},
 				{
 					type = "coreclr",
 					name = "attach process",
@@ -90,11 +286,17 @@ return {
 					vim.keymap.set("n", "gr", vim.lsp.buf.references, { buffer = buf })
 					vim.keymap.set("n", "<leader>ca", vim.lsp.buf.code_action, { buffer = buf })
 					vim.keymap.set("n", "<F5>", dap.continue, { buffer = buf })
+					vim.keymap.set("n", "<S-F5>", dap.terminate, { buffer = buf })
 					vim.keymap.set("n", "<F10>", dap.step_over, { buffer = buf })
 					vim.keymap.set("n", "<F11>", dap.step_into, { buffer = buf })
+					vim.keymap.set("n", "<S-F11>", dap.step_out, { buffer = buf })
 					vim.keymap.set("n", "<leader>b", dap.toggle_breakpoint, { buffer = buf })
-					vim.keymap.set("n", "<leader>dr", dap.repl.open, { buffer = buf })
+					vim.keymap.set("n", "<leader>dr", dap.repl.toggle, { buffer = buf })
 					vim.keymap.set("n", "<leader>dbu", dapUi.toggle, { buffer = buf })
+					vim.keymap.set("n", "<leader>dk", kill_dotnet_run, { buffer = buf })
+					vim.keymap.set("n", "<leader>ds", function()
+						vim.notify("Dotnet run: " .. get_dotnet_run_status(), vim.log.levels.INFO)
+					end, { buffer = buf })
 
 					vim.api.nvim_create_autocmd("BufWritePost", {
 						pattern = { "*.cs" },
@@ -105,7 +307,14 @@ return {
 
 			vim.lsp.config("ts_ls", {
 				cmd = { "typescript-language-server", "--stdio" },
-				filetypes = { "javascript", "javascriptreact", "javascript.jsx", "typescript", "typescriptreact", "typescript.tsx" },
+				filetypes = {
+					"javascript",
+					"javascriptreact",
+					"javascript.jsx",
+					"typescript",
+					"typescriptreact",
+					"typescript.tsx",
+				},
 				capabilities = capabilities,
 				root_markers = { "tsconfig.json", "package.json", "jsconfig.json", ".git" },
 				init_options = {
@@ -162,7 +371,16 @@ return {
 			vim.lsp.config("eslint", {
 				cmd = { "vscode-eslint-language-server", "--stdio" },
 				capabilities = capabilities,
-				root_markers = { ".eslintrc", ".eslintrc.js", ".eslintrc.json", ".eslintrc.yaml", ".eslintrc.yml", "eslint.config.js", "eslint.config.mjs", "package.json" },
+				root_markers = {
+					".eslintrc",
+					".eslintrc.js",
+					".eslintrc.json",
+					".eslintrc.yaml",
+					".eslintrc.yml",
+					"eslint.config.js",
+					"eslint.config.mjs",
+					"package.json",
+				},
 				filetypes = {
 					"javascript",
 					"typescript",
