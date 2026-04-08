@@ -298,9 +298,27 @@ return {
 						vim.notify("Dotnet run: " .. get_dotnet_run_status(), vim.log.levels.INFO)
 					end, { buffer = buf })
 
+					local function run_csharpier()
+						local file = vim.fn.expand("%:p")
+						local version_output = vim.fn.system("dotnet csharpier --version")
+						local major, minor = version_output:match("(%d+)%.(%d+)")
+						major = tonumber(major) or 0
+						minor = tonumber(minor) or 0
+
+						local cmd
+						if major > 0 or minor >= 26 then
+							cmd = "dotnet csharpier format " .. vim.fn.shellescape(file)
+						else
+							cmd = "dotnet csharpier " .. vim.fn.shellescape(file)
+						end
+
+						vim.fn.system(cmd)
+						vim.cmd("edit!")
+					end
+
 					vim.api.nvim_create_autocmd("BufWritePost", {
 						pattern = { "*.cs" },
-						command = ":!dotnet csharpier %",
+						callback = run_csharpier,
 					})
 				end,
 			})
