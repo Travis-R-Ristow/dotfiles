@@ -34,6 +34,18 @@ return {
 				find_files = {
 					hidden = true,
 				},
+				lsp_definitions = {
+					trim_text = true,
+					show_line = true,
+				},
+				lsp_implementations = {
+					trim_text = true,
+					show_line = true,
+				},
+				lsp_references = {
+					trim_text = true,
+					show_line = true,
+				},
 			},
 		})
 		telescope.load_extension("fzf")

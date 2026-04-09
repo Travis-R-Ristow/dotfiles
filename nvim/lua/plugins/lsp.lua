@@ -12,6 +12,22 @@ local function read_luacheck_globals()
 	return globals
 end
 
+local function lsp_goto_single_or_telescope(lsp_method, telescope_method)
+	return function()
+		vim.lsp.buf[lsp_method]({
+			on_list = function(options)
+				if #options.items == 1 then
+					local item = options.items[1]
+					vim.cmd("edit " .. vim.fn.fnameescape(item.filename))
+					vim.api.nvim_win_set_cursor(0, { item.lnum, (item.col or 1) - 1 })
+				else
+					require("telescope.builtin")[telescope_method]()
+				end
+			end,
+		})
+	end
+end
+
 local dotnet_run_job_id = nil
 local dotnet_run_pid = nil
 
@@ -281,8 +297,8 @@ return {
 				callback = function(event)
 					local buf = event.buf
 
-					vim.keymap.set("n", "gd", vim.lsp.buf.definition, { buffer = buf })
-					vim.keymap.set("n", "gD", vim.lsp.buf.implementation, { buffer = buf })
+					vim.keymap.set("n", "gd", lsp_goto_single_or_telescope("definition", "lsp_definitions"), { buffer = buf })
+					vim.keymap.set("n", "gD", lsp_goto_single_or_telescope("implementation", "lsp_implementations"), { buffer = buf })
 					vim.keymap.set("n", "gr", vim.lsp.buf.references, { buffer = buf })
 					vim.keymap.set("n", "<leader>ca", vim.lsp.buf.code_action, { buffer = buf })
 					vim.keymap.set("n", "<F5>", dap.continue, { buffer = buf })
