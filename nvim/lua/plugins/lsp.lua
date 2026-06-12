@@ -28,6 +28,21 @@ local function lsp_goto_single_or_telescope(lsp_method, telescope_method)
 	end
 end
 
+local csharpier_use_format_subcmd = nil
+
+local function get_csharpier_cmd(file)
+	if csharpier_use_format_subcmd == nil then
+		local version_str = vim.fn.system("dotnet csharpier --version"):gsub("%s+", "")
+		local major = tonumber(version_str:match("^(%d+)"))
+		csharpier_use_format_subcmd = major ~= nil and major >= 1
+	end
+
+	if csharpier_use_format_subcmd then
+		return "dotnet csharpier format " .. vim.fn.shellescape(file)
+	end
+	return "dotnet csharpier " .. vim.fn.shellescape(file)
+end
+
 local dotnet_run_job_id = nil
 local dotnet_run_pid = nil
 
@@ -63,17 +78,25 @@ local function find_csproj_files()
 	return files
 end
 
-local function get_launch_profiles(csproj_path)
+local function read_launch_settings(csproj_path)
 	local project_dir = vim.fn.fnamemodify(csproj_path, ":h")
 	local launch_settings_path = project_dir .. "/Properties/launchSettings.json"
 	local file = io.open(launch_settings_path, "r")
 	if not file then
-		return {}
+		return nil
 	end
 	local content = file:read("*a")
 	file:close()
 	local ok, parsed = pcall(vim.fn.json_decode, content)
 	if not ok or not parsed or not parsed.profiles then
+		return nil
+	end
+	return parsed
+end
+
+local function get_launch_profiles(csproj_path)
+	local parsed = read_launch_settings(csproj_path)
+	if not parsed then
 		return {}
 	end
 	local profiles = {}
@@ -82,6 +105,29 @@ local function get_launch_profiles(csproj_path)
 	end
 	table.sort(profiles)
 	return profiles
+end
+
+local function get_profile_port(csproj_path, profile)
+	local parsed = read_launch_settings(csproj_path)
+	if not parsed or not profile or not parsed.profiles[profile] then
+		return nil
+	end
+	local url = parsed.profiles[profile].applicationUrl
+	if not url then
+		return nil
+	end
+	return url:match("http://[^:]+:(%d+)") or url:match(":(%d+)")
+end
+
+local function find_pid_by_port(port)
+	local out = vim.fn.systemlist("lsof -nP -iTCP:" .. port .. " -sTCP:LISTEN -t")
+	for _, line in ipairs(out) do
+		local pid = tonumber(vim.trim(line))
+		if pid then
+			return pid
+		end
+	end
+	return nil
 end
 
 local function pick_csproj(callback)
@@ -134,7 +180,7 @@ end
 
 local dotnet_project_cwd = nil
 
-local function poll_and_attach(attempt)
+local function poll_and_attach(port, attempt)
 	local max_attempts = 50
 	attempt = attempt or 1
 
@@ -143,7 +189,7 @@ local function poll_and_attach(attempt)
 		return
 	end
 
-	local target_pid = find_dotnet_child_pid(dotnet_run_pid)
+	local target_pid = port and find_pid_by_port(port) or find_dotnet_child_pid(dotnet_run_pid)
 
 	if target_pid then
 		vim.notify("Attaching to PID: " .. target_pid, vim.log.levels.INFO)
@@ -157,7 +203,7 @@ local function poll_and_attach(attempt)
 		})
 	elseif attempt < max_attempts then
 		vim.defer_fn(function()
-			poll_and_attach(attempt + 1)
+			poll_and_attach(port, attempt + 1)
 		end, 500)
 	else
 		vim.notify("Timeout waiting for dotnet process", vim.log.levels.ERROR)
@@ -188,11 +234,17 @@ local function run_dotnet_and_attach(csproj_path, launch_profile)
 
 	dotnet_run_pid = vim.fn.jobpid(dotnet_run_job_id)
 	vim.notify("Started dotnet run (PID: " .. dotnet_run_pid .. ") in " .. project_dir, vim.log.levels.INFO)
-	vim.notify("Waiting 5 seconds for app to start...", vim.log.levels.INFO)
+
+	local port = get_profile_port(csproj_path, launch_profile)
+	if port then
+		vim.notify("Waiting for app to listen on port " .. port .. "...", vim.log.levels.INFO)
+	else
+		vim.notify("No port found in profile, falling back to child PID detection", vim.log.levels.WARN)
+	end
 
 	vim.defer_fn(function()
-		poll_and_attach(1)
-	end, 5000)
+		poll_and_attach(port, 1)
+	end, 6000)
 end
 
 vim.api.nvim_create_user_command("DotnetRunStatus", function()
@@ -313,29 +365,19 @@ return {
 					vim.keymap.set("n", "<leader>ds", function()
 						vim.notify("Dotnet run: " .. get_dotnet_run_status(), vim.log.levels.INFO)
 					end, { buffer = buf })
+				end,
+			})
 
-					local function run_csharpier()
-						local file = vim.fn.expand("%:p")
-						local version_output = vim.fn.system("dotnet csharpier --version")
-						local major, minor = version_output:match("(%d+)%.(%d+)")
-						major = tonumber(major) or 0
-						minor = tonumber(minor) or 0
-
-						local cmd
-						if major > 0 or minor >= 26 then
-							cmd = "dotnet csharpier format " .. vim.fn.shellescape(file)
-						else
-							cmd = "dotnet csharpier " .. vim.fn.shellescape(file)
-						end
-
-						vim.fn.system(cmd)
-						vim.cmd("edit!")
+			vim.api.nvim_create_autocmd("BufWritePost", {
+				pattern = { "*.cs" },
+				callback = function()
+					if vim.g.format_changed_only then
+						return
 					end
 
-					vim.api.nvim_create_autocmd("BufWritePost", {
-						pattern = { "*.cs" },
-						callback = run_csharpier,
-					})
+					local file = vim.fn.expand("%:p")
+					vim.fn.system(get_csharpier_cmd(file))
+					vim.cmd("edit!")
 				end,
 			})
 

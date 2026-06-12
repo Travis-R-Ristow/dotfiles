@@ -20,6 +20,10 @@ return {
 					lua = { "stylua" },
 				},
 				format_on_save = function(bufnr)
+					if vim.bo[bufnr].filetype == "cs" then
+						return
+					end
+
 					if not vim.g.format_changed_only then
 						return {
 							lsp_fallback = true,
